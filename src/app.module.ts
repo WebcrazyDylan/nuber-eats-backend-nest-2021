@@ -11,7 +11,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './users/users.module';
 import { User } from './users/entities/user.entity';
 import { JwtModule } from './jwt/jwt.module';
-import { JwtMiddleware } from './jwt/jwt.middleware';
 import { AuthModule } from './auth/auth.module';
 import { Verification } from './users/entities/verification.entity';
 import { MailModule } from './mail/mail.module';
@@ -22,6 +21,10 @@ import { Dish } from './restaurants/entities/dish.entity';
 import { OrdersModule } from './orders/orders.module';
 import { Order } from './orders/entities/order.entity';
 import { OrderItem } from './orders/entities/order-item.entity';
+import { CommonModule } from './common/common.module';
+import { PaymentsModule } from './payments/payments.module';
+import { Payment } from './payments/entities/payment.entity';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -60,19 +63,20 @@ import { OrderItem } from './orders/entities/order-item.entity';
         Dish,
         Order,
         OrderItem,
+        Payment,
       ],
     }),
     GraphQLModule.forRoot({
       installSubscriptionHandlers: true,
       autoSchemaFile: true,
       context: ({ req, connection }) => {
-        if (req) {
-          return { user: req['user'] };
-        } else {
-          console.log(connection);
-        }
+        const TOKEN_KEY = 'x-jwt';
+        return {
+          token: req ? req.headers[TOKEN_KEY] : connection.context[TOKEN_KEY],
+        };
       },
     }),
+    ScheduleModule.forRoot(),
     JwtModule.forRoot({
       privateKey: process.env.PRIVATE_KEY,
     }),
@@ -85,14 +89,10 @@ import { OrderItem } from './orders/entities/order-item.entity';
     UsersModule,
     RestaurantsModule,
     OrdersModule,
+    CommonModule,
+    PaymentsModule,
   ],
   controllers: [],
   providers: [],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(JwtMiddleware)
-      .forRoutes({ path: '/graphql', method: RequestMethod.POST });
-  }
-}
+export class AppModule {}
